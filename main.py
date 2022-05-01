@@ -12,8 +12,7 @@ import pylink
 import re
 import json
 import logging
-#import traceback
-
+from queue import Queue
 
 base64_main_icon = b'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'
 
@@ -21,16 +20,28 @@ THREAD_RUN_INTERVAL_S = 0.002
 
 RTT_DATA_WIN = '-DB_OUT-'+sg.WRITE_ONLY_KEY
 
+def batch_enqueue(q,data,format='hex_to_chr'):
+    if format == 'hex_to_chr':
+        for v in data:
+            q.put(chr(v))
+    elif format == 'chr':
+        for v in data:
+            q.put(v)
+
+def batch_dequeue(q):
+    return [q.get() for i in range(0,q.qsize())]
+
 class JlinkThread(threading.Thread):
 
     gui_wakeup_tick_th = 0
 
-    def __init__(self, window,jlink,timestamp = False,thread_start=False):
+    def __init__(self, window,jlink,rtt_data_q,timestamp = False,thread_start=False):
         super().__init__(daemon=True)
         self._thread_start = thread_start
         self.jlink = jlink
         self.window = window
         self.timestamp = timestamp
+        self.rtt_data_queue = rtt_data_q
         self.event = threading.Event()
         self.event.clear()
 
@@ -59,17 +70,17 @@ class JlinkThread(threading.Thread):
                     else:
                     #Turn off the timeout function, 10ms automatically submit data once to the GUI
                         gui_wake_tick = gui_wake_tick + 1
-                        if gui_wake_tick >= 5:
+                        if gui_wake_tick >= 10/(THREAD_RUN_INTERVAL_S*1000):
                             gui_wake_tick = 0
                             time_to = True
 
                     if time_to:
                         time_to = False
                         if len(rtt_data_list):
-                            str_data = ''.join([chr(i) for i in rtt_data_list])
                             if self.timestamp == True:
-                                str_data = '[' + datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[0:-3] + '] ' + str_data
-                            self.window.write_event_value('-JLINK_READ_DATA_THREAD-', str_data)
+                                str_data = '[' + datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[0:-3] + '] '
+                                batch_enqueue(self.rtt_data_queue, str_data, 'chr')
+                            batch_enqueue(self.rtt_data_queue,rtt_data_list,'hex_to_chr')
                             rtt_data_list = []
 
                     time.sleep(THREAD_RUN_INTERVAL_S)
@@ -113,8 +124,7 @@ def jlink_reset(jlink):
         jlink.close()
 
 def main():
-    logging.basicConfig(filename='rtt-t.log',filemode='w',encoding='utf-8', level=logging.DEBUG,\
-                        format='%(asctime)s %(message)s',datefmt='%Y/%m/%d %I:%M:%S')
+    logging.basicConfig(filename='rtt-t.log',filemode='w', level=logging.DEBUG,format='%(asctime)s %(message)s',datefmt='%Y/%m/%d %I:%M:%S')
     logging.debug('----------------------------------------------------------------')
     logging.debug('----------------------------------------------------------------')
     logging.debug('---------------RTT-T Debug Log---------------')
@@ -161,13 +171,14 @@ def main():
                sg.Frame('Text Data',sd_data_frame_layout,vertical_alignment='top')],
              ]
 
-    window = sg.Window('RTT Tool 1.5', layout,finalize=True,element_padding=(10,1),return_keyboard_events=False,icon=base64_main_icon,resizable=True)
+    window = sg.Window('RTT Tool 1.6', layout,finalize=True,element_padding=(10,1),return_keyboard_events=False,icon=base64_main_icon,resizable=True)
     window.set_min_size(window.size)
 
     #window['-CFG-'].expand(True, True, True)
     window[RTT_DATA_WIN].expand(True, True, True)
 
-    jlink_thread = JlinkThread(window,jlink)
+    rtt_data_queue = Queue()
+    jlink_thread = JlinkThread(window,jlink,rtt_data_queue)
     jlink_thread.start()
 
     mul_scroll_end = False
@@ -175,7 +186,7 @@ def main():
     real_time_save_data = ''
 
     while True:
-        event, values = window.read(timeout=200)
+        event, values = window.read(timeout=100)
 
         if event == sg.WIN_CLOSED:
             jlink_thread.jlink_thread_ctr(False)
@@ -224,7 +235,7 @@ def main():
                         jlink.reset(ms=10, halt=False)
                         #J-Link is connected
                         if jlink.connected():
-                            window['-DB_OUT-' + sg.WRITE_ONLY_KEY].write('LOG:J-Link connect success!\n')
+                            window[RTT_DATA_WIN].write('LOG:J-Link connect success!\n')
                             window['-JK_CONNECT-'].update(button_color=('grey0','green4'))
                             window['-JK_CONNECT-'].update('Disconnect J-Link')
 
@@ -245,6 +256,7 @@ def main():
                             jlink_thread.jlink_thread_ctr(True)
 
                             jlink.rtt_start()
+                            rtt_data_queue.queue.clear()
                             window['-RX_TIMEOUT-'].update(disabled=True)
                             window['-SN-'].update(disabled=True)
                             window['-SPEED-'].update(disabled=True)
@@ -266,10 +278,8 @@ def main():
                     window['-RX_TIMEOUT-'].update(disabled=False)
                     window['-SN-'].update(disabled=False)
                     window['-SPEED-'].update(disabled=False)
-
         elif event == 'Clear':
-            window['-DB_OUT-' + sg.WRITE_ONLY_KEY].update('')
-
+            window[RTT_DATA_WIN].update('')
         elif event == '-TIMESTAMP_CTR-':
             if window['-TIMESTAMP_CTR-'].get_text() == 'Open Timestamp':
                 window['-TIMESTAMP_CTR-'].update(button_color=('grey0', 'green4'))
@@ -279,20 +289,15 @@ def main():
                 window['-TIMESTAMP_CTR-'].update(button_color=('grey0', 'grey100'))
                 window['-TIMESTAMP_CTR-'].update('Open Timestamp')
                 jlink_thread.jlink_timestamp_set(False)
-
         elif event == 'Scroll to the end':
             mul_scroll_end = True
-            window['-DB_OUT-' + sg.WRITE_ONLY_KEY].update(autoscroll=True)
-
+            window[RTT_DATA_WIN].update(autoscroll=True)
         elif event == '-DATA_SAVE-':
             file_name =  r'log_' + datetime.now().strftime('%Y-%m-%d-%H-%M-%S') + '.txt'
             rtt_data_str = re.sub('(\r\n)+','\n',window[RTT_DATA_WIN].get())
-           #file_name = os.path.dirname(os.path.realpath(sys.argv[0])) + '\\log\\' + file_name
-           #print(file_name)
             with open(file_name, 'w', encoding='utf-8') as f:
                 f.write(rtt_data_str)
             sg.popup_no_wait('File saved successfully')
-
         elif event == '-RT_DATA_SAVE-':
             if window['-RT_DATA_SAVE-'].get_text() == 'Open Real-time saving data':
                 window['-RT_DATA_SAVE-'].update(button_color=('grey0','green4'))
@@ -301,27 +306,32 @@ def main():
             else:
                 window['-RT_DATA_SAVE-'].update(button_color=('grey0', 'grey100'))
                 window['-RT_DATA_SAVE-'].update('Open Real-time saving data')
-
         elif event == '__TIMEOUT__':
-            if len(real_time_save_data) > 0:
-                try:
-                    with open(real_time_save_file_name, 'a', encoding='utf-8') as f:
-                        f.write(real_time_save_data)
-                    real_time_save_data = ''
-                except Exception as e:
-                    logging.debug('Write real time data to file error[' + str(e) + ']\n')
-                except:
-                    logging.debug('Write real time data to file error')
-                    sg.Print("Write real time data to file error")
-
+            if rtt_data_queue.qsize() > 0:
+                rtt_data = ''.join(batch_dequeue(rtt_data_queue))
+                window[RTT_DATA_WIN].write(rtt_data)
+                if window['-RT_DATA_SAVE-'].get_text() == 'Close Real-time saving data':
+                    real_time_save_data = real_time_save_data + re.sub('(\r\n)+', '\n', rtt_data)
+                    try:
+                        with open(real_time_save_file_name, 'a', encoding='utf-8') as f:
+                            f.write(real_time_save_data)
+                        real_time_save_data = ''
+                    except Exception as e:
+                        real_time_save_data = ''
+                        logging.debug('Write real time data to file error[' + str(e) + ']\n')
+                    except:
+                        real_time_save_data = ''
+                        logging.debug('Write real time data to file error')
+                        sg.Print("Write real time data to file error")
         elif event == '-JLINK_READ_DATA_THREAD-':
             if values['-JLINK_READ_DATA_THREAD-'] != 'J-Link connect lost':
-                window['-DB_OUT-' + sg.WRITE_ONLY_KEY].write(values['-JLINK_READ_DATA_THREAD-'])
+                window[RTT_DATA_WIN].write(values['-JLINK_READ_DATA_THREAD-'])
                 if window['-RT_DATA_SAVE-'].get_text() == 'Close Real-time saving data':
                     real_time_save_data =  real_time_save_data + re.sub('(\r\n)+','\n',values['-JLINK_READ_DATA_THREAD-'])
             else:
                 logging.debug('J-Link connect lost')
                 jlink_reset(jlink)
+                rtt_data_queue.queue.clear()
                 jlink_thread.jlink_thread_ctr(False)
                 window['-DB_OUT-' + sg.WRITE_ONLY_KEY].write('LOG:J-Link connection has been lost' + '\n')
                 window['-JK_CONNECT-'].update(button_color=('grey0', 'grey100'))
@@ -329,7 +339,6 @@ def main():
                 window['-RX_TIMEOUT-'].update(disabled=False)
                 window['-SN-'].update(disabled=False)
                 window['-SPEED-'].update(disabled=False)
-
         elif event == '-SD_DATA_BT-':
             data_cmd = window['-SD_DATA_TXT-'].get()
             if data_cmd.startswith('cmd:'):
