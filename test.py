@@ -10,11 +10,14 @@ def batch_enqueue(q,data):
 def batch_dequeue(q):
     return [q.get() for i in range(0,q.qsize())]
 
-s = [0x30,0x31,0x32,0x33,0x34,0x35]
+s = 'afafafaf'
 
 data_q = Queue()
 
 
-batch_enqueue(data_q, s)
+data_q.put(s)
 
-print(''.join(batch_dequeue(data_q)))
+#batch_enqueue(data_q, s)
+
+
+print(type(data_q.get()))

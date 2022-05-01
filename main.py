@@ -19,16 +19,11 @@ base64_main_icon = b'iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAAAXNSR0IArs4
 THREAD_RUN_INTERVAL_S = 0.002
 RTT_DATA_WIN = '-DB_OUT-'+sg.WRITE_ONLY_KEY
 
-def batch_enqueue(q,data,format='hex_to_chr'):
-    if format == 'hex_to_chr':
-        for v in data:
-            q.put(chr(v))
-    elif format == 'chr':
-        for v in data:
-            q.put(v)
-
 def batch_dequeue(q):
-    return [q.get() for i in range(0,q.qsize())]
+    s = ''
+    for i in range(0, q.qsize()):
+        s += q.get()
+    return s
 
 class JlinkThread(threading.Thread):
 
@@ -76,10 +71,11 @@ class JlinkThread(threading.Thread):
                     if time_to:
                         time_to = False
                         if len(rtt_data_list):
+                            str_data = ''
                             if self.timestamp == True:
                                 str_data = '[' + datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[0:-3] + '] '
-                                batch_enqueue(self.rtt_data_queue, str_data, 'chr')
-                            batch_enqueue(self.rtt_data_queue,rtt_data_list,'hex_to_chr')
+                            str_data += ''.join([chr(v) for v in rtt_data_list])
+                            self.rtt_data_queue.put(str_data)
                             rtt_data_list = []
 
                     time.sleep(THREAD_RUN_INTERVAL_S)
@@ -307,7 +303,7 @@ def main():
                 window['-RT_DATA_SAVE-'].update('Open Real-time saving data')
         elif event == '__TIMEOUT__':
             if rtt_data_queue.qsize() > 0:
-                rtt_data = ''.join(batch_dequeue(rtt_data_queue))
+                rtt_data = batch_dequeue(rtt_data_queue)
                 window[RTT_DATA_WIN].write(rtt_data)
                 if window['-RT_DATA_SAVE-'].get_text() == 'Close Real-time saving data':
                     real_time_save_data = real_time_save_data + re.sub('(\r\n)+', '\n', rtt_data)
