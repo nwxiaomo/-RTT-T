@@ -19,5 +19,5 @@ data_q.put(s)
 
 #batch_enqueue(data_q, s)
 
-
+print(chr(0xff))
 print(type(data_q.get()))

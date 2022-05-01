@@ -19,6 +19,8 @@ base64_main_icon = b'iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAAAXNSR0IArs4
 THREAD_RUN_INTERVAL_S = 0.002
 RTT_DATA_WIN = '-DB_OUT-'+sg.WRITE_ONLY_KEY
 
+jk_thread_lock = threading.Lock()
+
 def batch_dequeue(q):
     s = ''
     for i in range(0, q.qsize()):
@@ -41,7 +43,6 @@ class JlinkThread(threading.Thread):
 
     def run(self):
         rtt_data_list = []
-        rtt_data_list_temp = []
         gui_wake_tick = 0
         rtt_data_none_cnt = 0
         time_to = False
@@ -49,7 +50,7 @@ class JlinkThread(threading.Thread):
         while True:
             if self._thread_start:
                 try:
-                    rtt_data_list_temp = self.jlink.rtt_read(0,2048) #1ms = 1k
+                    rtt_data_list_temp = self.jlink.rtt_read(0,4096)
                     if len(rtt_data_list_temp):
                         rtt_data_list = rtt_data_list + rtt_data_list_temp
                         rtt_data_none_cnt = 0
@@ -75,7 +76,11 @@ class JlinkThread(threading.Thread):
                             if self.timestamp == True:
                                 str_data = '[' + datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[0:-3] + '] '
                             str_data += ''.join([chr(v) for v in rtt_data_list])
-                            self.rtt_data_queue.put(str_data)
+                            jk_thread_lock.acquire()
+                            try:
+                                self.rtt_data_queue.put(str_data)
+                            finally:
+                                jk_thread_lock.release()
                             rtt_data_list = []
 
                     time.sleep(THREAD_RUN_INTERVAL_S)
@@ -303,7 +308,11 @@ def main():
                 window['-RT_DATA_SAVE-'].update('Open Real-time saving data')
         elif event == '__TIMEOUT__':
             if rtt_data_queue.qsize() > 0:
-                rtt_data = batch_dequeue(rtt_data_queue)
+                jk_thread_lock.acquire()
+                try:
+                    rtt_data = batch_dequeue(rtt_data_queue)
+                finally:
+                    jk_thread_lock.release()
                 window[RTT_DATA_WIN].write(rtt_data)
                 if window['-RT_DATA_SAVE-'].get_text() == 'Close Real-time saving data':
                     real_time_save_data = real_time_save_data + re.sub('(\r\n)+', '\n', rtt_data)
